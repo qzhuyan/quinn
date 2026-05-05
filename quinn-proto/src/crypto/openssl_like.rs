@@ -37,10 +37,15 @@ impl crypto::HmacKey for HmacKey {
     }
 
     fn verify(&self, data: &[u8], signature: &[u8]) -> Result<(), CryptoError> {
+        if signature.len() != 32 {
+            return Err(CryptoError);
+        }
         let mut actual = [0u8; 32];
         self.sign(data, &mut actual);
-        // Use OpenSSL's constant-time comparison to avoid timing attacks
-        if openssl::memcmp::eq(&actual, signature) {
+        // Use OpenSSL's constant-time comparison to avoid timing attacks.
+        // Both slices are exactly 32 bytes so the comparison is always constant-time.
+        let sig: &[u8; 32] = signature.try_into().expect("length checked above");
+        if openssl::memcmp::eq(&actual, sig) {
             Ok(())
         } else {
             Err(CryptoError)
